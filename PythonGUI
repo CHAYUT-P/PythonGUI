@@ -1,0 +1,571 @@
+import customtkinter as ctk  # Use customtkinter instead of tkinter
+from tkinter import filedialog, messagebox, ttk
+from PIL import Image, ImageTk
+import pickle
+import os
+from datetime import datetime
+from tkcalendar import DateEntry
+
+class DentalManagementSystem:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Dental Management System")
+        self.master.geometry("800x600")
+        self.master.configure(bg="#ffffff")  # Normal background color
+
+        self.patients = []
+        self.load_patients()
+        self.photo_path = ""
+
+        # Dental treatments
+        self.dental_treatments = [
+            "Check-up",
+            "Cleaning",
+            "Filling",
+            "Tooth Extraction",
+            "Root Canal Therapy",
+            "Dental Crown",
+            "Dental Bridge",
+            "Dentures (Full)",
+            "Dentures (Partial)",
+            "Teeth Whitening",
+            "Dental Veneers",
+            "Dental Implants",
+            "Orthodontics (Braces)",
+            "Invisalign",
+            "Periodontal Therapy",
+            "Scaling and Root Planing",
+            "Gum Surgery",
+            "Fluoride Treatment",
+            "Dental Sealants",
+            "Oral Cancer Screening",
+            "TMJ Therapy",
+            "Sleep Apnea Treatment",
+            "Pediatric Dentistry",
+            "Wisdom Tooth Extraction",
+            "Night Guard",
+            "Sports Mouth Guard",
+            "Cosmetic Bonding",
+            "Porcelain Inlays and Onlays",
+            "Smile Makeover",
+            "Full Mouth Reconstruction",
+            "Laser Gum Contouring",
+            "Orthodontic Retainers",
+            "Sedation Dentistry",
+            "Oral Hygiene Education",
+            "Occlusal Adjustment",
+            "Dental X-rays",
+            "Sinus Lift",
+            "Bone Grafting",
+            "Apicoectomy",
+            "Cavity Risk Assessment",
+            "Implant-Supported Dentures",
+            "Gum Recession Treatment",
+            "Preventive Resin Restorations",
+            "Teeth Polishing",
+            "Lingual Braces",
+            "Space Maintainers for Kids",
+            "Frenectomy",
+            "Dental Emergencies",
+            "Oral Biopsy",
+            "Orthognathic Surgery Consultation",
+            "Pulpotomy",
+            "Baby Tooth Capping",
+            "Anxiety-Free Dentistry"
+        ]
+
+
+        # Left-side menu
+        self.menu_frame = ctk.CTkFrame(self.master, fg_color="#d0d0d0", width=200)
+        self.menu_frame.pack(side=ctk.LEFT, fill=ctk.Y)
+
+        ctk.CTkButton(self.menu_frame, text="Home", command=self.show_home).pack(pady=10)
+        ctk.CTkButton(self.menu_frame, text="Patients", command=self.show_patients).pack(pady=10)
+        ctk.CTkButton(self.menu_frame, text="Appointments", command=self.show_appointments).pack(pady=10)
+
+        # Main content area
+        self.content_frame = ctk.CTkFrame(self.master)
+        self.content_frame.pack(side=ctk.RIGHT, fill=ctk.BOTH, expand=True)
+
+        self.show_home()
+
+    def show_home(self):
+        self.clear_content()
+        home_label = ctk.CTkLabel(self.content_frame, text="Welcome to the Dental Management System", font=("Arial", 18), text_color="#000000")
+        home_label.pack(pady=20)
+
+    def show_patients(self):
+        self.clear_content()
+        self.notebook = ttk.Notebook(self.content_frame)
+        self.notebook.pack(pady=10)
+
+        # Patient Information Tab
+        self.patient_info_frame = ttk.Frame(self.notebook, width=800, height=400)
+        self.notebook.add(self.patient_info_frame, text="Add Patient")
+        self.create_patient_form()
+
+        # View Patients Tab
+        self.view_patients_frame = ttk.Frame(self.notebook, width=800, height=400)
+        self.notebook.add(self.view_patients_frame, text="View Patients")
+        self.create_view_patients()
+
+    def create_patient_form(self):
+        ctk.CTkLabel(self.patient_info_frame, text="First Name:").grid(row=0, column=0, padx=10, pady=10)
+        self.first_name_entry = ctk.CTkEntry(self.patient_info_frame)
+        self.first_name_entry.grid(row=0, column=1)
+
+        ctk.CTkLabel(self.patient_info_frame, text="Last Name:").grid(row=1, column=0, padx=10, pady=10)
+        self.last_name_entry = ctk.CTkEntry(self.patient_info_frame)
+        self.last_name_entry.grid(row=1, column=1)
+
+        ctk.CTkLabel(self.patient_info_frame, text="Date of Birth:").grid(row=2, column=0, padx=10, pady=10)
+        self.dob_entry = DateEntry(self.patient_info_frame, date_pattern="y-mm-dd")  # This will be the calendar widget
+        self.dob_entry.grid(row=2, column=1)
+
+        # Bind the date selection event
+        self.dob_entry.bind("<<DateEntrySelected>>", self.check_age)
+
+        ctk.CTkLabel(self.patient_info_frame, text="Address:").grid(row=3, column=0, padx=10, pady=10)
+        self.address_entry = ctk.CTkEntry(self.patient_info_frame)
+        self.address_entry.grid(row=3, column=1)
+
+        ctk.CTkLabel(self.patient_info_frame, text="Phone Number:").grid(row=4, column=0, padx=10, pady=10)
+        self.phone_entry = ctk.CTkEntry(self.patient_info_frame)
+        self.phone_entry.grid(row=4, column=1)
+
+        ctk.CTkLabel(self.patient_info_frame, text="Email:").grid(row=5, column=0, padx=10, pady=10)
+        self.email_entry = ctk.CTkEntry(self.patient_info_frame)
+        self.email_entry.grid(row=5, column=1)
+
+        ctk.CTkLabel(self.patient_info_frame, text="Dental Treatment:").grid(row=6, column=0, padx=10, pady=10)
+        self.search_var = ctk.StringVar()
+        self.treatment_combobox_search = ctk.CTkEntry(self.patient_info_frame, textvariable=self.search_var ,placeholder_text="Threatment...")
+        self.treatment_combobox_search.grid(row=6, column=1)
+        self.treatment_combobox_search.bind('<KeyRelease>', self.update_combobox)
+
+
+        self.treatment_combobox = ttk.Combobox(self.patient_info_frame, values=self.dental_treatments)
+        self.treatment_combobox.grid(row=7, column=1)
+
+
+        ctk.CTkButton(self.patient_info_frame, text="Upload Photo", command=self.upload_photo).grid(row=8, column=0, padx=10, pady=10)
+        self.photo_display = ctk.CTkLabel(self.patient_info_frame, text="No photo uploaded")
+        self.photo_display.grid(row=8, column=1)
+
+        # Add button for adding patients
+        ctk.CTkButton(self.patient_info_frame, text="Add Patient", command=self.add_patient).grid(row=9, columnspan=2, pady=20)
+
+        # Fields for parent information (hidden by default)
+        self.parent_frame = ctk.CTkFrame(self.patient_info_frame)
+        ctk.CTkLabel(self.parent_frame, text="Parent Name:").grid(row=0, column=0, padx=10, pady=10)
+        self.parent_name_entry = ctk.CTkEntry(self.parent_frame)
+        self.parent_name_entry.grid(row=0, column=1)
+
+        ctk.CTkLabel(self.parent_frame, text="Parent Phone:").grid(row=1, column=0, padx=10, pady=10)
+        self.parent_phone_entry = ctk.CTkEntry(self.parent_frame)
+        self.parent_phone_entry.grid(row=1, column=1)
+
+        self.parent_frame.grid_remove()  # Initially hide parent info
+
+    def update_combobox(self, event=None):
+        search_term = self.search_var.get().lower()
+        filtered_treatments = []
+        
+        for treatment in self.dental_treatments:
+            if search_term in treatment.lower():
+                filtered_treatments.append(treatment)
+        
+        self.treatment_combobox['values'] = filtered_treatments
+        
+        if filtered_treatments:
+            self.treatment_combobox.current(0)
+        else:
+            self.treatment_combobox.set('')
+
+
+    def check_age(self, event=None):
+        dob = self.dob_entry.get_date() 
+        print(f"Selected DOB: {dob}") 
+
+        if dob:
+            # Calculate age based on the selected date
+            age = (datetime.now().date() - dob).days // 365
+            print(f"Calculated Age: {age}")  # Debug print to check calculated age
+
+            if age < 18:
+                self.parent_frame.grid(row=9, column=0, columnspan=2)  # Show parent info fields
+            else:
+                self.parent_frame.grid_remove()  # Hide parent info fields if age is 18 or older
+
+    def create_view_patients(self):
+        search_label = ctk.CTkLabel(self.view_patients_frame, text="Search by First Name:")
+        search_label.pack(pady=5)
+        self.search_entry = ctk.CTkEntry(self.view_patients_frame)
+        self.search_entry.pack(pady=5)
+
+        # Trace for real-time search
+        self.search_entry.bind("<KeyRelease>", self.search_patient)
+
+        self.tree = ttk.Treeview(self.view_patients_frame, columns=("Patient ID", "First Name", "Last Name", "DOB"), show="headings")
+        self.tree.heading("Patient ID", text="Patient ID")
+        self.tree.heading("First Name", text="First Name")
+        self.tree.heading("Last Name", text="Last Name")
+        self.tree.heading("DOB", text="Date of Birth")
+        self.tree.pack(pady=10, fill="both", expand=True)
+
+        self.populate_treeview()
+        self.tree.bind("<Double-1>", lambda event: self.show_patient_info(self.tree.selection()[0]))
+
+        ctk.CTkButton(self.view_patients_frame, text="Remove Patient", command=self.remove_patient).pack(pady=10)
+
+    def upload_photo(self):
+        filepath = filedialog.askopenfilename()
+        if filepath:
+            self.photo_path = filepath
+            img = Image.open(filepath)
+            img.thumbnail((100, 100))
+            img = ImageTk.PhotoImage(img)
+            self.photo_display.configure(image=img, text="")
+            self.photo_display.image = img
+
+    def add_patient(self):
+        first_name = self.first_name_entry.get()
+        last_name = self.last_name_entry.get()
+        dob = self.dob_entry.get_date()  # Get the date from the DateEntry widget
+        address = self.address_entry.get()
+        phone = self.phone_entry.get()
+        email = self.email_entry.get()
+        dental_treatment = self.treatment_combobox.get()
+        errorlist = []
+        if not first_name:
+            errorlist.append("First name")
+
+        if not last_name:
+            errorlist.append("Last name")
+
+
+        if not dob:
+            errorlist.append("Date of birth")
+
+
+        if not address:
+            errorlist.append("Address")
+
+
+        if not phone:
+            errorlist.append("phone")
+
+
+        if not email:
+            errorlist.append("Email")
+
+
+        if not self.photo_path:
+            messagebox.showerror("Error", "A photo must be uploaded.")
+            return
+
+        # Check if dental treatment is selected
+        if not dental_treatment:
+            errorlist.append("Dental treatment")
+
+        if len(errorlist) > 0:
+            if len(errorlist) == 1:
+                text = f"{errorlist[0]} is required."
+            else:
+                text = ", ".join(errorlist[:-1]) + " and " + errorlist[-1] + " are required."
+            
+            print(errorlist)
+            messagebox.showerror("Error", text)
+            return
+
+
+        age = (datetime.now().date() - dob).days // 365  # Ensure both are datetime.date objects
+        parent_info = {}
+
+        if age < 18:
+            # Show parent fields if under 18
+            parent_name = self.parent_name_entry.get()
+            parent_phone = self.parent_phone_entry.get()
+
+            # Check if parent name is provided for underage patients
+            if not parent_name:
+                messagebox.showerror("Error", "Parent name is required for patients under 18.")
+                return
+
+            # Check if parent phone is provided for underage patients
+            if not parent_phone:
+                messagebox.showerror("Error", "Parent phone number is required for patients under 18.")
+                return
+
+            parent_info = {
+                "parent_name": parent_name,
+                "parent_phone": parent_phone
+            }
+
+        patient_id = self.generate_patient_id()
+
+        # Create the patient dictionary
+        patient = {
+            "patient_id": patient_id,
+            "first_name": first_name,
+            "last_name": last_name,
+            "dob": dob,
+            "address": address,
+            "phone": phone,
+            "email": email,
+            "dental_treatment": dental_treatment,
+            "photo": self.photo_path,
+            "parent_info": parent_info
+        }
+
+        # Debugging: Print patient details before appending
+        print("Adding patient:", patient)
+
+        # Make sure patients is a list
+        if not isinstance(self.patients, list):
+            self.patients = []  # Ensure it's always a list
+        self.patients.append(patient)  # Append new patient to the list
+
+        # Save patients
+        self.save_patients()
+        print(self.patients)
+
+        # Show success message
+        messagebox.showinfo("Success", "Patient added successfully!")
+        self.clear_patient_form()
+
+
+    def generate_patient_id(self):
+        today = datetime.now().strftime("%y%m%d")
+        patient_count = len(self.patients) + 1
+        return f"{today}-{str(patient_count).zfill(3)}"
+
+    def populate_treeview(self):
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+
+        for patient in self.patients:
+            self.tree.insert("", "end", values=(patient["patient_id"],
+                                                patient["first_name"], 
+                                                patient["last_name"], 
+                                                patient["dob"]))
+
+    def search_patient(self, event=None):
+        search_term = self.search_entry.get().lower()
+        filtered_patients = []
+        for patient in self.patients:
+            if search_term in patient["first_name"].lower():
+                filtered_patients.append(patient)
+        self.populate_treeview_from_search(filtered_patients)
+
+    def populate_treeview_from_search(self, filtered_patients):
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+
+        for patient in filtered_patients:
+            self.tree.insert("", "end", values=(patient["patient_id"], patient["first_name"], patient["last_name"], patient["dob"]))
+
+    def search_patient(self, event=None):
+        search_term = self.search_entry.get().lower()
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+
+        for patient in self.patients:
+            if search_term in patient["first_name"].lower():
+                self.tree.insert("", "end", values=(patient["id"], patient["first_name"], patient["last_name"], patient["dob"]))
+
+    def show_patient_info(self, selected_item):
+        patient_id = self.tree.item(selected_item, "values")[0]
+        patient = next(p for p in self.patients if p["patient_id"] == patient_id)
+        
+        info_window = ctk.CTkToplevel(self.master)
+        info_window.title("Patient Information")
+        info_window.geometry("400x400")
+        
+        ctk.CTkLabel(info_window, text=f"Patient ID: {patient['patient_id']}", font=("Arial", 14)).pack(pady=5)
+        ctk.CTkLabel(info_window, text=f"First Name: {patient['first_name']}", font=("Arial", 14)).pack(pady=5)
+        ctk.CTkLabel(info_window, text=f"Last Name: {patient['last_name']}", font=("Arial", 14)).pack(pady=5)
+        ctk.CTkLabel(info_window, text=f"Date of Birth: {patient['dob']}", font=("Arial", 14)).pack(pady=5)
+        ctk.CTkLabel(info_window, text=f"Address: {patient['address']}", font=("Arial", 14)).pack(pady=5)
+        ctk.CTkLabel(info_window, text=f"Phone: {patient['phone']}", font=("Arial", 14)).pack(pady=5)
+        ctk.CTkLabel(info_window, text=f"Email: {patient['email']}", font=("Arial", 14)).pack(pady=5)
+        ctk.CTkLabel(info_window, text=f"Dental Treatment: {patient['dental_treatment']}", font=("Arial", 14)).pack(pady=5)
+
+        if patient['parent_info']:
+            ctk.CTkLabel(info_window, text="Parent Information:", font=("Arial", 14, "bold")).pack(pady=10)
+            ctk.CTkLabel(info_window, text=f"Parent Name: {patient['parent_info']['parent_name']}", font=("Arial", 14)).pack(pady=5)
+            ctk.CTkLabel(info_window, text=f"Parent Phone: {patient['parent_info']['parent_phone']}", font=("Arial", 14)).pack(pady=5)
+        
+        close_button = ctk.CTkButton(info_window, text="Close", command=info_window.destroy)
+        close_button.pack(pady=20)
+
+    def remove_patient(self):
+        selected_item = self.tree.selection()
+        if selected_item:
+            patient_id = self.tree.item(selected_item, "values")[0]
+            new_patients = []
+            for p in self.patients:
+                if p["patient_id"] != patient_id:
+                    new_patients.append(p)
+            self.patients = new_patients
+            self.save_patients()
+            self.populate_treeview()
+            messagebox.showinfo("Success", "Patient removed successfully!")
+
+    def show_appointments(self):
+        self.clear_content()
+        self.notebook = ttk.Notebook(self.content_frame)
+        self.notebook.pack(pady=10)
+
+        # Add Appointment Tab
+        self.add_appointment_frame = ttk.Frame(self.notebook, width=800, height=400)
+        self.notebook.add(self.add_appointment_frame, text="Add Appointment")
+        self.create_add_appointment_form()
+
+        # View Appointments Tab
+        self.view_appointments_frame = ttk.Frame(self.notebook, width=800, height=400)
+        self.notebook.add(self.view_appointments_frame, text="View Appointments")
+        self.create_view_appointments()
+
+    def create_add_appointment_form(self):
+        ctk.CTkLabel(self.add_appointment_frame, text="Select Patient:").grid(row=0, column=0, padx=10, pady=10)
+        self.patient_combobox = ttk.Combobox(self.add_appointment_frame, values=[p["first_name"] + " " + p["last_name"] for p in self.patients])
+        self.patient_combobox.grid(row=0, column=1)
+
+        ctk.CTkLabel(self.add_appointment_frame, text="Appointment Date:").grid(row=1, column=0, padx=10, pady=10)
+        self.appointment_date_entry = DateEntry(self.add_appointment_frame, date_pattern="y-mm-dd")
+        self.appointment_date_entry.grid(row=1, column=1)
+
+        ctk.CTkLabel(self.add_appointment_frame, text="Appointment Time:").grid(row=2, column=0, padx=10, pady=10)
+
+        # Hour selection (0-23)
+        self.hour_var = ctk.StringVar()
+        self.hour_combobox = ttk.Combobox(self.add_appointment_frame, textvariable=self.hour_var, width=5, values=[f"{i:02d}" for i in range(24)])
+        self.hour_combobox.place(x=140, y=110)
+        self.hour_combobox.set("00")  # Set a default value
+
+        # Label for hours
+        ctk.CTkLabel(self.add_appointment_frame, text="hrs").place(x=220, y=110)
+
+        # Minute selection (0-59)
+        self.minute_var = ctk.StringVar()
+        self.minute_combobox = ttk.Combobox(self.add_appointment_frame, textvariable=self.minute_var, width=5, values=[f"{i:02d}" for i in range(60)])
+        self.minute_combobox.place(x=250, y=110)
+        self.minute_combobox.set("00")  # Set a default value
+
+        # Label for minutes
+        ctk.CTkLabel(self.add_appointment_frame, text="mins").place(x=330, y=110)
+
+        ctk.CTkLabel(self.add_appointment_frame, text="Reason for Visit:").grid(row=3, column=0, padx=10, pady=10)
+        self.reason_entry = ctk.CTkEntry(self.add_appointment_frame)
+        self.reason_entry.grid(row=3, column=1)
+
+        # Add button for adding appointments
+        ctk.CTkButton(self.add_appointment_frame, text="Add Appointment", command=self.add_appointment).grid(row=4, columnspan=2, pady=20)
+
+
+    def add_appointment(self):
+        patient_name = self.patient_combobox.get()
+        appointment_date = self.appointment_date_entry.get_date()
+        appointment_time = self.appointment_time_entry.get()
+        reason = self.reason_entry.get()
+
+        if not patient_name or not appointment_date or not appointment_time or not reason:
+            messagebox.showerror("Error", "All fields are required to add an appointment.")
+            return
+
+        # Create appointment dictionary
+        appointment = {
+            "patient_name": patient_name,
+            "date": appointment_date,
+            "time": appointment_time,
+            "reason": reason
+        }
+        self.appointments.append(appointment)
+        self.save_appointments()
+
+        messagebox.showinfo("Success", "Appointment added successfully!")
+        self.clear_appointment_form()
+        self.populate_appointments_treeview()
+
+    def clear_appointment_form(self):
+        self.patient_combobox.set('')
+        self.appointment_date_entry.set_date(datetime.now())
+        self.appointment_time_entry.delete(0, ctk.END)
+        self.reason_entry.delete(0, ctk.END)
+
+    def create_view_appointments(self):
+        search_label = ctk.CTkLabel(self.view_appointments_frame, text="Search by Patient Name:")
+        search_label.pack(pady=5)
+        self.appointment_search_entry = ctk.CTkEntry(self.view_appointments_frame)
+        self.appointment_search_entry.pack(pady=5)
+        self.appointment_search_entry.bind("<KeyRelease>", self.search_appointment)
+
+        self.appointment_tree = ttk.Treeview(self.view_appointments_frame, columns=("Patient", "Date", "Time", "Reason"), show="headings")
+        self.appointment_tree.heading("Patient", text="Patient")
+        self.appointment_tree.heading("Date", text="Date")
+        self.appointment_tree.heading("Time", text="Time")
+        self.appointment_tree.heading("Reason", text="Reason")
+        self.appointment_tree.pack(pady=10, fill="both", expand=True)
+
+        self.populate_appointments_treeview()
+
+    def populate_appointments_treeview(self):
+        for row in self.appointment_tree.get_children():
+            self.appointment_tree.delete(row)
+
+        for appointment in self.appointments:
+            self.appointment_tree.insert("", "end", values=(appointment["patient_name"], appointment["date"], appointment["time"], appointment["reason"]))
+
+    def search_appointment(self, event=None):
+        search_term = self.appointment_search_entry.get().lower()
+        filtered_appointments = [a for a in self.appointments if search_term in a["patient_name"].lower()]
+        self.populate_treeview_from_search(filtered_appointments)
+
+    def populate_treeview_from_search(self, filtered_appointments):
+        for row in self.appointment_tree.get_children():
+            self.appointment_tree.delete(row)
+
+        for appointment in filtered_appointments:
+            self.appointment_tree.insert("", "end", values=(appointment["patient_name"], appointment["date"], appointment["time"], appointment["reason"]))
+
+    def save_appointments(self):
+        with open("appointments.pkl", "wb") as f:
+            pickle.dump(self.appointments, f)
+
+    def load_appointments(self):
+        if os.path.exists("appointments.pkl"):
+            with open("appointments.pkl", "rb") as f:
+                self.appointments = pickle.load(f)
+        else:
+            self.appointments = []
+
+
+    def clear_content(self):
+        for widget in self.content_frame.winfo_children():
+            widget.destroy()
+
+    def clear_patient_form(self):
+        self.first_name_entry.delete(0, ctk.END)
+        self.last_name_entry.delete(0, ctk.END)
+        self.dob_entry.set_date("")
+        self.address_entry.delete(0, ctk.END)
+        self.phone_entry.delete(0, ctk.END)
+        self.treatment_combobox.set("")
+        self.photo_display.configure(image=None, text="No photo uploaded")
+        self.photo_path = ""
+        self.parent_name_entry.delete(0, ctk.END)
+        self.parent_phone_entry.delete(0, ctk.END)
+
+    def save_patients(self):
+        with open("patients.pkl", "wb") as file:
+            pickle.dump(self.patients, file)
+
+    def load_patients(self):
+        if os.path.exists("patients.pkl"):
+            with open("patients.pkl", "rb") as file:
+                self.patients = pickle.load(file)
+
+root = ctk.CTk() 
+app = DentalManagementSystem(root)
+root.mainloop()
